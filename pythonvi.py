@@ -18,6 +18,7 @@ def writelog(*argv):
     if debug:
         logline = " ".join(["%s"%arg for arg in argv])
         logfile.write(logline+"\n")
+        logfile.flush()
 
 class LineBeyondScreenError(Exception):
     "Raised when the line or cursor is beyond the screen and needs scrolling"
@@ -187,7 +188,7 @@ class Editor(object):
         self.searchkw = None
         self.searchdir = "forward"
         self.clipboard = ClipBoard()
-        self.showlineno = False
+        self.showlineno = True
         # render the initial screen
         self.refresh()
         self.refresh_command_line()
@@ -278,6 +279,8 @@ class Editor(object):
         ]
         chr_cmd_map = dict(chr_cmd_tuples)
         meta_cmd_map = {
+            curses.ascii.DLE: "open_in_folder", # CTRL + P
+            curses.ascii.ACK: "find_in_folder", # CTRL + F
             curses.ascii.DC2: "redo", # CTRL + R
             # curses.ascii.ACK: "next_page", # CTRL + F
             curses.ascii.EOT: "next_half_page", # CTRL + D
@@ -342,7 +345,7 @@ class Editor(object):
         elif s[idx] == " ":
             while idx>=0 and idx < len(s) and s[idx] == " ": idx += step
         else:
-            while id>=0 and idx < len(s) and s[idx] not in wordchars and s[idx] != " ": idx+=step
+            while idx>=0 and idx < len(s) and s[idx] not in wordchars and s[idx] != " ": idx+=step
         return idx
 
     def advance_term(self, s, idx, direction="forward"):
@@ -843,6 +846,11 @@ class Editor(object):
                 return
             self.pos = pos
             self.refresh_cursor()
+
+        elif cmd == "open_in_folder":
+            writelog("open_in_folder")
+        elif cmd == "find_in_folder":
+            writelog("find_in_folder")
 
         ### copy paste commands ###
         elif cmd == "yank_line":
