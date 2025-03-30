@@ -279,8 +279,10 @@ class Editor(object):
         chr_cmd_map = dict(chr_cmd_tuples)
         meta_cmd_map = {
             curses.ascii.DC2: "redo", # CTRL + R
-            curses.ascii.ACK: "next_page", # CTRL + F
-            curses.ascii.STX: "prev_page", # CTRL + B
+            # curses.ascii.ACK: "next_page", # CTRL + F
+            curses.ascii.EOT: "next_page", # CTRL + D
+            # curses.ascii.STX: "prev_page", # CTRL + B
+            curses.ascii.NAK: "prev_page", # CTRL + U
             curses.ascii.ENQ: "scroll_down", # CTRL + E
             curses.ascii.EM: "scroll_up", # CTRL + Y
             curses.KEY_DC: "delete_char",
@@ -656,7 +658,7 @@ class Editor(object):
         elif cmd == "switch_case":
             line = self.buffer[self.pos[0]]
             ch = line[self.pos[1]]
-            if ch in string.letters:
+            if ch in string.ascii_letters:
                 line = line[:self.pos[1]]+ch.swapcase()+line[self.pos[1]+1:]
                 self.buffer[self.pos[0]] = line
                 self.refresh()
@@ -1122,7 +1124,7 @@ class Editor(object):
 
     def get_lineno_width(self):
         if self.showlineno:
-            return len(str(len(self.buffer)))
+            return len(str(len(self.buffer))) + 1
         else:
             return 0
 
@@ -1174,7 +1176,7 @@ class Editor(object):
             singleline = line[:self.maxx]
             self.clear_scr_line(_y)
             if self.showlineno:
-                self.scr.addstr(_y, 0, str(self.topline+i+1).rjust(self.get_lineno_width()), curses.A_REVERSE)
+                self.scr.addstr(_y, 0, str(self.topline+i+1).rjust(self.get_lineno_width()-1), curses.A_REVERSE)
             self.scr.addstr(_y, self.get_lineno_width(), singleline)
             idx = self.maxx
             line_height = 1
