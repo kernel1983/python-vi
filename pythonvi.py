@@ -280,9 +280,9 @@ class Editor(object):
         meta_cmd_map = {
             curses.ascii.DC2: "redo", # CTRL + R
             # curses.ascii.ACK: "next_page", # CTRL + F
-            curses.ascii.EOT: "next_page", # CTRL + D
+            curses.ascii.EOT: "next_half_page", # CTRL + D
             # curses.ascii.STX: "prev_page", # CTRL + B
-            curses.ascii.NAK: "prev_page", # CTRL + U
+            curses.ascii.NAK: "prev_half_page", # CTRL + U
             curses.ascii.ENQ: "scroll_down", # CTRL + E
             curses.ascii.EM: "scroll_up", # CTRL + Y
             curses.KEY_DC: "delete_char",
@@ -438,32 +438,40 @@ class Editor(object):
                 self.editop.value = oldline
                 self.editop.replacement = ""
                 self.commit_current_edit()
+
         ### commands for moving cursor position ###
         elif cmd == "goto_line_start":
             self.pos = (self.pos[0], 0)
             self.refresh_cursor()
+
         elif cmd == "goto_line_end":
             self.pos = (self.pos[0], max(len(self.buffer[self.pos[0]])-1, 0))
             self.refresh_cursor()
+
         elif cmd == "goto_prev_line_start":
             if self.pos[0]>0:
                 y, x = self.pos
                 self.pos = (y-1, 0)
                 self.refresh_cursor()
+
         elif cmd == "goto_next_line_start":
             if self.pos[0]<len(self.buffer)-1:
                 y, x = self.pos
                 self.pos = (y+1, 0)
                 self.refresh_cursor()
+
         elif cmd == "goto_first_screen_line":
             self.pos = self.topline, 0
             self.refresh_cursor()
+
         elif cmd == "goto_last_screen_line":
             self.pos = self.topline +self.screen_lines-1, 0
             self.refresh_cursor()
+
         elif cmd == "goto_middle_screen_line":
             self.pos = self.topline + self.screen_lines/2, 0
             self.refresh_cursor()
+
         elif cmd == "next_page":
             if self.topline == len(self.buffer)-1: 
                 return
@@ -471,6 +479,7 @@ class Editor(object):
             self.refresh()
             self.pos = (self.topline, 0)
             self.refresh_cursor()
+
         elif cmd == "prev_page":
             if self.topline == 0:
                 return
@@ -486,6 +495,33 @@ class Editor(object):
             self.topline = idx
             self.refresh()
             self.pos = (self.topline + self.screen_lines-1, 0)
+            self.refresh_cursor()
+
+        elif cmd == "next_half_page":
+            if self.topline == len(self.buffer)-1: 
+                return
+            self.topline = self.topline + self.screen_lines//2 -1
+            self.refresh()
+            self.pos = (self.topline, 0)
+            self.refresh_cursor()
+
+        elif cmd == "prev_half_page":
+            if self.topline == 0:
+                self.pos = (self.topline, 0)
+                self.refresh_cursor()
+                return
+            # need to calculate how many line we need to scroll up
+            idx = self.topline
+            line_cnt = 0
+            while idx>=0:
+                line_cnt += len(self.buffer[idx])/self.maxx+1
+                if line_cnt > self.maxy-1:
+                    break
+                idx -= 1
+            idx = min(idx+1, self.topline)
+            self.topline = idx
+            self.refresh()
+            self.pos = (self.topline + self.screen_lines//2-1, 0)
             self.refresh_cursor()
 
         elif cmd == "scroll_down":
