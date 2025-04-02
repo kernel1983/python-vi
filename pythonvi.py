@@ -1,3 +1,5 @@
+#!/bin/env python
+
 """
 This is my implementaion of the classic vi editor
 The plan is to support only the very basic functionality and commands
@@ -168,6 +170,19 @@ class Editor(object):
             "expandtab": True,
             "tabspaces": 4,
         }
+        signal.signal(signal.SIGWINCH, self.handle_sigwinch)
+
+    def handle_sigwinch(self, signum, frame):
+        """Handle window resize signal"""
+        # Get the new terminal size
+        curses.endwin()
+        curses.initscr()
+        self.maxy, self.maxx = self.scr.getmaxyx()
+
+        self.scr.clear()
+        self.refresh()
+        self.refresh_command_line()
+        self.refresh_cursor()
 
     def main_loop(self, stdscr):        
         self.scr = stdscr
