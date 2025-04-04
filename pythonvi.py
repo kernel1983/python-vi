@@ -170,6 +170,7 @@ class Editor(object):
             "expandtab": True,
             "tabspaces": 4,
         }
+        self.utf8buffer = []
         signal.signal(signal.SIGWINCH, self.handle_sigwinch)
 
     def handle_sigwinch(self, signum, frame):
@@ -1012,7 +1013,7 @@ class Editor(object):
         while True: # iterate over the lines
             visited.append((y, x))
             line = self.buffer[y][x:] if direction=="forward" else self.buffer[y][:x]
-            if line:
+            if line and self.searchkw:
                 if direction == "forward":
                     mo = self.searchkw.search(line) # left to right
                     if mo:
@@ -1123,8 +1124,32 @@ class Editor(object):
         self.refresh_cursor()
 
     def handle_editing(self, ch):
+        s = None
+        if ch < 256 and ch != 27:
+            try:
+                s = bytes(self.utf8buffer+[ch]).decode("utf8")
+                self.utf8buffer = []
+            except:
+                self.utf8buffer.append(ch)
+        else:
+            self.utf8buffer = []
+
         y, x = self.pos
-        if curses.ascii.isprint(ch) or ch==ord("\n") or ch==ord("\t"):
+        if ch==27 or ch==curses.ascii.ETX: # ESC, to exit editing mode
+            self.mode = "command"
+            self.command_editing = False
+            self.partial = ""
+            self.status_line = "-- COMMAND --"
+            # need to commit edit before switching mode
+            self.commit_current_edit()
+            # If currently pos beyond end of line, move back 1 char before entering command mode
+            if x != 0 and x == len(self.buffer[y]):
+                self.pos = (y, x-1)
+                self.refresh_cursor()
+            self.refresh_command_line()
+
+        elif s or ch==ord("\n") or ch==ord("\t"):
+            self.utf8buffer = []
             if not self.editop or not self.editop.edit_type == "insert":
                 self.start_new_char_edit("insert", self.pos)
             if chr(ch)=="\t" and self.config["expandtab"]: # if expand tab into spaces
@@ -1133,7 +1158,7 @@ class Editor(object):
                 self.buffer[y] = self.buffer[y][:x] + spaces + self.buffer[y][x:]
                 self.pos = y, x+self.config["tabspaces"]
             else:
-                self.editop.append_edit(chr(ch))
+                self.editop.append_edit(s)
                 if chr(ch)=="\n":
                     line = self.buffer[y]
                     self.buffer[y] = line[:x]
@@ -1143,7 +1168,7 @@ class Editor(object):
                     self.reindent_line(y+1)
                     self.start_new_char_edit("insert", self.pos)
                 else:
-                    self.buffer[y] = self.buffer[y][:x]+chr(ch)+self.buffer[y][x:]
+                    self.buffer[y] = self.buffer[y][:x]+s+self.buffer[y][x:]
                     self.pos = y, x+1
             self.refresh()
             self.refresh_cursor()
@@ -1162,18 +1187,6 @@ class Editor(object):
             self.pos = self.pos[0], len(self.buffer[self.pos[0]]) if self.buffer[self.pos[0]] else 0
             self.refresh_cursor()
 
-        elif ch==27 or ch==curses.ascii.ETX: # ESC, to exit editing mode
-            self.mode = "command"
-            self.command_editing = False
-            self.partial = ""
-            self.status_line = "-- COMMAND --"
-            # need to commit edit before switching mode
-            self.commit_current_edit()
-            # If currently pos beyond end of line, move back 1 char before entering command mode
-            if x != 0 and x == len(self.buffer[y]):
-                self.pos = (y, x-1)
-                self.refresh_cursor()
-            self.refresh_command_line()
         return True
 
     # View part of MVC: screen rendering
