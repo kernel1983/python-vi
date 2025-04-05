@@ -1045,9 +1045,11 @@ class Editor(object):
         # print y, x
         if ch in (curses.KEY_UP, ord('k')) and y > 0:
             y = y-1
+            p = self.pos2buffer((y, x))
+            x = self.buffer2x(y, p)
             last_char = len(self.buffer[y])
             if self.mode == "command" and last_char>0:
-                last_char = last_char-1
+                last_char = self.buffer2x(y, last_char-1)
             x = min(x, last_char)
             self.pos = (y, x)
             # if y<self.topline:
@@ -1057,9 +1059,11 @@ class Editor(object):
 
         elif ch in (curses.KEY_DOWN, ord('j')) and y < len(self.buffer)-1:
             y = y + 1
+            p = self.pos2buffer((y, x))
+            x = self.buffer2x(y, p)
             last_char = len(self.buffer[y])
             if self.mode == "command" and last_char>0:
-                last_char = last_char-1
+                last_char = self.buffer2x(y, last_char-1)
             x = min(x, last_char)
             self.pos = (y, x)
             self.refresh_cursor()
@@ -1083,6 +1087,28 @@ class Editor(object):
                 else:
                     self.pos = (y, x+2)
                 self.refresh_cursor()
+
+    def pos2buffer(self, pos):
+        y, x = pos
+        p = 0
+        for i, c in enumerate(self.buffer[y]):
+            if p >= x:
+                return i
+            if curses.ascii.isprint(c):
+                p += 1
+            else:
+                p += 2
+        return 0
+
+    def buffer2x(self, y, p):
+        x = 0
+        writelog(p, self.buffer[y][:p])
+        for c in self.buffer[y][:p]:
+            if curses.ascii.isprint(c):
+                x += 1
+            else:
+                x += 2
+        return x
 
     def handle_delete_char(self, ch):
         if (not self.editop or not self.editop.edit_type == "delete"
@@ -1130,18 +1156,6 @@ class Editor(object):
                 self.pos = y, x-1
         self.refresh()
         self.refresh_cursor()
-
-    def pos2buffer(self, pos):
-        y, x = pos
-        p = 0
-        for i, c in enumerate(self.buffer[y]):
-            if p >= x:
-                return i
-            if curses.ascii.isprint(c):
-                p += 1
-            else:
-                p += 2
-        return 0
 
     def handle_editing(self, ch):
         s = None
