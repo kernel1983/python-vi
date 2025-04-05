@@ -137,7 +137,7 @@ class EditList(object):
         self.cursor += 1
         return True
 
-    def commitEdit(self, op):
+    def commit_edit(self, op):
         del self.edits[self.cursor+1:]
         # for backward delete, correct the pos and value
         if op.backwards:
@@ -220,13 +220,13 @@ class Editor(object):
 
     def commit_current_edit(self):
         if self.editop:
-            self.editlist.commitEdit(self.editop)
+            self.editlist.commit_edit(self.editop)
             self.editop = None
 
     def start_new_char_edit(self, etype, pos):
         # check if old edit is committed
         if self.editop:
-            self.editlist.commitEdit(self.editop)
+            self.editlist.commit_edit(self.editop)
         self.editop = EditOp(self, etype, "char", pos)
 
     def do_command(self, ch):
@@ -781,7 +781,7 @@ class Editor(object):
             self.clipboard.store([oldline]) # deleted lines are stored in clipboard
             del self.buffer[self.pos[0]]
             if not self.buffer: # should preserve at least one blank line
-                self.buffer =[""]
+                self.buffer = [""]
                 self.editop = EditOp(self, "replace", "line", self.pos)
                 self.editop.replacement = [""]
             else:
@@ -1069,11 +1069,15 @@ class Editor(object):
             self.refresh_cursor()
 
         elif ch in (curses.KEY_RIGHT, ord('l')):
+            i = self.pos2buffer(self.pos)
             last_char = len(self.buffer[y])
             if self.mode == "command" and last_char>0:
                 last_char = last_char-1
-            if x<last_char:
-                self.pos = (y, x+1)
+            if i<last_char:
+                if curses.ascii.isprint(self.buffer[y][i]):
+                    self.pos = (y, x+1)
+                else:
+                    self.pos = (y, x+2)
                 self.refresh_cursor()
 
     def handle_delete_char(self, ch):
@@ -1148,7 +1152,7 @@ class Editor(object):
                 self.refresh_cursor()
             self.refresh_command_line()
 
-        elif s or ch==ord("\n") or ch==ord("\t"):
+        elif (s and not curses.ascii.isctrl(chr(ch))) or ch==ord("\n") or ch==ord("\t"):
             self.utf8buffer = []
             if not self.editop or not self.editop.edit_type == "insert":
                 self.start_new_char_edit("insert", self.pos)
@@ -1278,6 +1282,20 @@ class Editor(object):
             _y+=1
         # last line is reserved for commands
         # self.refresh_command_line()
+
+    def buffer2pos(self):
+        pass
+
+    def pos2buffer(self, pos):
+        y, x = pos
+        p = 0
+        for i, c in enumerate(self.buffer[y]):
+            if p >= x:
+                return i
+            if curses.ascii.isprint(c):
+                p += 1
+            else:
+                p += 2
 
 def intercept_signals():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
