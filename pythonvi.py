@@ -1065,7 +1065,11 @@ class Editor(object):
             self.refresh_cursor()
 
         elif ch in (curses.KEY_LEFT, ord('h')) and x>0:
-            self.pos = (y, x-1)
+            i = self.pos2buffer(self.pos)
+            if i > 0 and not curses.ascii.isprint(self.buffer[y][i-1]):
+                self.pos = (y, x-2)
+            else:
+                self.pos = (y, x-1)
             self.refresh_cursor()
 
         elif ch in (curses.KEY_RIGHT, ord('l')):
@@ -1126,6 +1130,18 @@ class Editor(object):
                 self.pos = y, x-1
         self.refresh()
         self.refresh_cursor()
+
+    def pos2buffer(self, pos):
+        y, x = pos
+        p = 0
+        for i, c in enumerate(self.buffer[y]):
+            if p >= x:
+                return i
+            if curses.ascii.isprint(c):
+                p += 1
+            else:
+                p += 2
+        return 0
 
     def handle_editing(self, ch):
         s = None
@@ -1282,20 +1298,6 @@ class Editor(object):
             _y+=1
         # last line is reserved for commands
         # self.refresh_command_line()
-
-    def buffer2pos(self):
-        pass
-
-    def pos2buffer(self, pos):
-        y, x = pos
-        p = 0
-        for i, c in enumerate(self.buffer[y]):
-            if p >= x:
-                return i
-            if curses.ascii.isprint(c):
-                p += 1
-            else:
-                p += 2
 
 def intercept_signals():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
