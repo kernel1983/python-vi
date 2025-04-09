@@ -1098,7 +1098,7 @@ class Editor(object):
                 p += 1
             else:
                 p += 2
-        return x
+        return i + (x - p) + 1
 
     def buffer2x(self, y, p):
         x = 0
