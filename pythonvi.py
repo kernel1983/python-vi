@@ -1091,6 +1091,7 @@ class Editor(object):
     def pos2buffer(self, pos):
         y, x = pos
         p = 0
+        i = 0
         for i, c in enumerate(self.buffer[y]):
             if p >= x:
                 return i
@@ -1331,6 +1332,7 @@ def main():
         buf = [line[:-1] if line.endswith('\n') else line for line in f.readlines()]
     else:
         f = None
+    if not buf:
         buf = [""]
     intercept_signals()
     editor = Editor(f, buf)
