@@ -429,7 +429,12 @@ class Editor(object):
             self.refresh_cursor()
         elif cmd == "insert_after":
             if self.buffer[self.pos[0]]:
-                self.pos = (self.pos[0], self.pos[1]+1)
+                y, x = self.pos
+                i = self.pos2buffer(self.pos)
+                if curses.ascii.isprint(self.buffer[y][i]):
+                    self.pos = (y, x+1)
+                else:
+                    self.pos = (y, x+2)
                 self.refresh_cursor()
         elif cmd == "insert_line_end":
             self.pos = (self.pos[0], len(self.buffer[self.pos[0]]))
