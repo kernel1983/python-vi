@@ -181,12 +181,14 @@ class Editor(object):
         self.maxy, self.maxx = self.scr.getmaxyx()
 
         self.scr.clear()
+        curses.use_default_colors()
         self.refresh()
         self.refresh_command_line()
         self.refresh_cursor()
 
     def main_loop(self, stdscr):
         self.scr = stdscr
+        curses.use_default_colors()
         self.maxy, self.maxx = stdscr.getmaxyx()
 
         # This is the model part of MVC
@@ -195,12 +197,12 @@ class Editor(object):
         self.screen_lines = 0
         self.mode = "command"
         self.command_editing = False
-        self.pos = (0,0) # line and column of buffer
+        self.pos = (0, 0) # line and column of buffer
         self.partial = "" # partial cmd in command mode
         self.status_line = "-- COMMAND --"
         self.commandline = "" # command entered in command line at the bottom of screen
         self.checkpoint = -1 # pointer into the editlist where save happens
-        self.searchpos = (0,0)
+        self.searchpos = (0, 0)
         self.searchkw = None
         self.searchdir = "forward"
         self.clipboard = ClipBoard()
