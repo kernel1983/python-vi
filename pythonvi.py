@@ -1334,6 +1334,7 @@ def main():
         print("Only support opening one file for now")
         raise SystemExit()
 
+    buf = []
     if openfile:
         f = open(openfile, "r+")
         buf = [line[:-1] if line.endswith('\n') else line for line in f.readlines()]
