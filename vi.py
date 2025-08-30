@@ -188,15 +188,21 @@ class Editor:
         return x
 
     def refresh(self):
-        self.stdscr.clear()
+        # Avoid full clear to prevent flickering, only update changed lines
         for i, line in enumerate(self.buffer):
             if i >= self.maxy - 1:
                 break
+            # Clear the line and redraw
+            self.stdscr.move(i, 0)
+            self.stdscr.clrtoeol()
             try:
                 self.stdscr.addstr(i, 0, line[:self.maxx-1])
             except curses.error:
                 pass
+
         # Status line
+        self.stdscr.move(self.maxy-1, 0)
+        self.stdscr.clrtoeol()
         status = f"-- {self.mode.upper()} --"
         if self.filename:
             status += f" {self.filename}"
@@ -204,6 +210,16 @@ class Editor:
             self.stdscr.addstr(self.maxy-1, 0, status[:self.maxx-1])
         except curses.error:
             pass
+
+        # Fill remaining lines with ~
+        for i in range(len(self.buffer), self.maxy-1):
+            self.stdscr.move(i, 0)
+            self.stdscr.clrtoeol()
+            try:
+                self.stdscr.addstr(i, 0, "~")
+            except curses.error:
+                pass
+
         # Cursor
         screen_x = self.buffer2x(self.pos[0], self.pos[1])
         try:
