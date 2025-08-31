@@ -93,6 +93,30 @@ class Editor:
             if self.pos[0] > 0:
                 prev_line_len = len(self.buffer[self.pos[0] - 1])
                 self.pos = (self.pos[0] - 1, min(self.pos[1], prev_line_len))
+        elif ch == 8:  # Ctrl+H
+            log("Ctrl+H detected, moving to start of line.")
+            self.pos = (self.pos[0], 0)
+        
+        elif ch == 10 or ch == 14: # Ctrl+J or Ctrl+N
+            log(f"Ctrl key {ch} detected, moving down half screen.")
+            half_screen = self.maxy // 2
+            new_line = self.pos[0] + half_screen
+            new_line = min(new_line, len(self.buffer) - 1)
+            new_col = min(self.pos[1], len(self.buffer[new_line]))
+            self.pos = (new_line, new_col)
+
+        elif ch == 11: # Ctrl+K
+            log("Ctrl+K detected, moving up half screen.")
+            half_screen = self.maxy // 2
+            new_line = self.pos[0] - half_screen
+            new_line = max(0, new_line)
+            new_col = min(self.pos[1], len(self.buffer[new_line]))
+            self.pos = (new_line, new_col)
+
+        elif ch == 12: # Ctrl+L
+            log("Ctrl+L detected, moving to end of line.")
+            self.pos = (self.pos[0], len(self.buffer[self.pos[0]]))
+
         elif ch == ord(':'):
             if not self.handle_ex_command():
                 return False
