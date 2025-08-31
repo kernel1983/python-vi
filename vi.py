@@ -9,12 +9,21 @@ import curses.ascii
 import sys
 import os
 import locale
+import datetime
+import inspect
+
+def log(msg):
+    frameinfo = inspect.getframeinfo(inspect.currentframe().f_back)
+    with open("log.txt", "a", encoding="utf-8") as f:
+        f.write(f"{datetime.datetime.now()}: {os.path.basename(frameinfo.filename)}:{frameinfo.lineno} - {msg}\n")
+
 
 # Set locale for UTF-8 support
 locale.setlocale(locale.LC_ALL, '')
 
 class Editor:
     def __init__(self, filename=None):
+        log(f"Editor initialized for file: {filename}")
         self.filename = filename
         self.buffer = [""]
         self.pos = (0, 0)  # (line, column)
@@ -42,11 +51,16 @@ class Editor:
         self.maxy, self.maxx = stdscr.getmaxyx()
         self.refresh()
         while True:
-            ch = stdscr.getch()
+            try:
+                ch = stdscr.getch()
+            except KeyboardInterrupt:
+                continue
             if not self.handle_input(ch):
                 break
 
     def handle_input(self, ch):
+        if ch == 3:  # Ctrl+C
+            return True
         if self.mode == "command":
             return self.handle_command(ch)
         elif self.mode == "insert":
@@ -71,7 +85,7 @@ class Editor:
         elif ch == ord('l'):
             if self.pos[1] < len(self.buffer[self.pos[0]]):
                 self.pos = (self.pos[0], self.pos[1] + 1)
-        elif ch == ord('j'):
+        elif ch == ord('j') or ch == ord('n'):
             if self.pos[0] < len(self.buffer) - 1:
                 next_line_len = len(self.buffer[self.pos[0] + 1])
                 self.pos = (self.pos[0] + 1, min(self.pos[1], next_line_len))
@@ -80,26 +94,33 @@ class Editor:
                 prev_line_len = len(self.buffer[self.pos[0] - 1])
                 self.pos = (self.pos[0] - 1, min(self.pos[1], prev_line_len))
         elif ch == ord(':'):
-            self.handle_ex_command()
+            if not self.handle_ex_command():
+                return False
         self.refresh()
         return True
 
     def handle_insert(self, ch):
-        s = None
-        if ch < 256 and ch != 27:
-            try:
-                s = bytes(self.utf8buffer + [ch]).decode("utf-8")
-                self.utf8buffer = []
-            except UnicodeDecodeError:
-                self.utf8buffer.append(ch)
-        else:
-            self.utf8buffer = []
-
+        log(f"ch {ch}")
         if ch == 27:  # ESC
+            log(f"ESC ctrl + [ ; ")
             self.mode = "command"
             if self.pos[1] > 0:
                 self.pos = (self.pos[0], self.pos[1] - 1)
-        elif ch == 10:  # Enter
+        elif ch == 11:  # Ctrl+K
+            if self.pos[0] > 0:
+                prev_line_len = len(self.buffer[self.pos[0] - 1])
+                self.pos = (self.pos[0] - 1, min(self.pos[1], prev_line_len))
+        elif ch == 8:  # Ctrl+H
+            if self.pos[1] > 0:
+                self.pos = (self.pos[0], self.pos[1] - 1)
+        elif ch == 12:  # Ctrl+L
+            if self.pos[1] < len(self.buffer[self.pos[0]]):
+                self.pos = (self.pos[0], self.pos[1] + 1)
+        elif ch == 14:  # Ctrl+N
+            if self.pos[0] < len(self.buffer) - 1:
+                next_line_len = len(self.buffer[self.pos[0] + 1])
+                self.pos = (self.pos[0] + 1, min(self.pos[1], next_line_len))
+        elif ch == 10:  # Enter Ctrl+j Ctrl+m
             line = self.buffer[self.pos[0]]
             self.buffer[self.pos[0]] = line[:self.pos[1]]
             self.buffer.insert(self.pos[0] + 1, line[self.pos[1]:])
@@ -109,10 +130,20 @@ class Editor:
                 line = self.buffer[self.pos[0]]
                 self.buffer[self.pos[0]] = line[:self.pos[1]-1] + line[self.pos[1]:]
                 self.pos = (self.pos[0], self.pos[1] - 1)
-        elif s and not curses.ascii.isctrl(chr(ch)):
-            line = self.buffer[self.pos[0]]
-            self.buffer[self.pos[0]] = line[:self.pos[1]] + s + line[self.pos[1]:]
-            self.pos = (self.pos[0], self.pos[1] + len(s))
+        else:
+            s = None
+            if ch < 256 and ch != 27:
+                try:
+                    s = bytes(self.utf8buffer + [ch]).decode("utf-8")
+                    self.utf8buffer = []
+                except (UnicodeDecodeError, ValueError):
+                    self.utf8buffer.append(ch)
+            else:
+                self.utf8buffer = []
+            if s and not curses.ascii.isctrl(chr(ch)):
+                line = self.buffer[self.pos[0]]
+                self.buffer[self.pos[0]] = line[:self.pos[1]] + s + line[self.pos[1]:]
+                self.pos = (self.pos[0], self.pos[1] + len(s))
         self.refresh()
         return True
 
