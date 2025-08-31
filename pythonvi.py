@@ -41,6 +41,7 @@ class EditOp(object):
         self.object_type = otype
         self.pos = pos
         self.value = ""
+        self.replacement = ""
         self.backwards = False
 
     def reverse(self):
